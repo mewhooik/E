@@ -149,7 +149,7 @@ async def download_and_merge_pdf(book, chat_id, bot, progress_msg_id):
         progress_text = (
             f"⏳ <b>Processing:</b> {truncate(full_title, 40)}\n"
             f"📥 Merged: <b>{idx}/{total_ch}</b> Chapters ({percent}%)\n"
-            f"🔄 Current: {truncate(ch_title, 35)}\n"
+            f" Current: {truncate(ch_title, 35)}\n"
             f"<i>Please wait, do not spam...</i>"
         )
         try:
@@ -195,7 +195,7 @@ async def download_and_merge_pdf(book, chat_id, bot, progress_msg_id):
         log.warning(f"No PDFs could be downloaded for {full_title}")
         return None, 0, total_ch
 
-# ───────────────── PYROGRAM BOT SETUP ─────────────────
+# ──────────────── PYROGRAM BOT SETUP ─────────────────
 app = Client("PinnacleMergedBot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
 @app.on_message(filters.command("start") & filters.private)
@@ -218,7 +218,7 @@ async def start_command(client: Client, message: Message):
         f.write("📚 Pinnacle Available Ebooks\n\n")
         for i, book in enumerate(books, 1):
             title = truncate(book.get("title", "Unknown"), 60)
-            price_tag = "🟡 Free" if is_free(book) else f"₹{get_price(book)}"
+            price_tag = "🟡 Free" if is_free(book) else f"{get_price(book)}"
             f.write(f"{i}] {title} ({price_tag})\n")
     
     caption = (
@@ -299,10 +299,10 @@ async def handle_selection(client: Client, message: Message):
             await asyncio.sleep(2)
             continue
         
-        # 4. Upload Final Merged PDF
+        # 4. Upload Final Merged PDF (UPDATED CAPTION)
         final_caption = (
             f"📚 <b>Book:</b> {full_title}\n"
-            f"📄 <b>Chapters Merged:</b> {pdf_cnt} / {ch_cnt}\n"
+            f"📄 <b>Chapters :</b> {pdf_cnt}\n"
             f"📁 <b>File:</b> <code>{os.path.basename(merged_pdf_path)}</code>\n\n"
             f"<i>Powered by @PinnacleallEbook </i>"
         )
