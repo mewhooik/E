@@ -319,16 +319,9 @@ async def handle_selection(client: Client, message: Message):
         
         # 4. Upload Final Merged PDF (UPDATED WITH THUMB)
         final_caption = (
-            f"<blockquote><b>📚 Book: {full_title}</b></blockquote>\n\n"
-
-            f"<blockquote expandable>"
-            f"📄 <b>Chapters :</b> {pdf_cnt}\n"
-            f"💸 <b>Price :</b> ₹{price}\n"
-            f"</blockquote>\n\n"
-
-            f"<blockquote>"
-            f"Powered by @PinnacleallEbook"
-            f"</blockquote>"
+            f"📚 <b>Book:</b> {full_title}\n\n"
+            f"📄 <b>Chapters :</b> {pdf_cnt}\n\n"
+            f"<i>Powered by @PinnacleallEbook</i>"
         )
         
         try:
