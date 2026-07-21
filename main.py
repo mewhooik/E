@@ -17,7 +17,7 @@ from pyrogram.errors import FloodWait
 
 # ───────────────── CONFIG ─────────────────
 # ✅ अपना Bot Token, API ID और API Hash यहाँ डालें
-BOT_TOKEN = "8646009620:AAHW_ABhXrfBo2sMtQ2_CBTV0Ak9KhWVuiA"
+BOT_TOKEN = "8840274547:AAGqA7dYBSlAWPA9QF0N2zW1uvoUeTu9lY0"
 API_ID = 22370234       # अपना API ID डालें
 API_HASH = "706badded011715ae115e5ab3bf83f87" # अपना API Hash डालें
 
