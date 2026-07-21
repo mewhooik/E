@@ -299,12 +299,11 @@ async def handle_selection(client: Client, message: Message):
             await asyncio.sleep(2)
             continue
         
-        # 4. Upload Final Merged PDF (UPDATED CAPTION)
+        # 4. Upload Final Merged PDF (UPDATED SPACED CAPTION)
         final_caption = (
-            f"📚 <b>Book:</b> {full_title}\n"
-            f"📄 <b>Chapters :</b> {pdf_cnt}\n"
-            f"📁 <b>File:</b> <code>{os.path.basename(merged_pdf_path)}</code>\n\n"
-            f"<i>Powered by @PinnacleallEbook </i>"
+            f"📚 <b>Book:</b> {full_title}\n\n"
+            f"📄 <b>Chapters :</b> {pdf_cnt}\n\n"
+            f"<i>Powered by @PinnacleallEbook</i>"
         )
         
         try:
