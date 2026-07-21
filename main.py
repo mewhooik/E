@@ -16,7 +16,7 @@ from pyrogram.types import Message
 from pyrogram.errors import FloodWait
 
 # ───────────────── CONFIG ─────────────────
-BOT_TOKEN = "8646009620:AAFnz0TBeN675UJX52GQq5rEXvsWa-RWfvI"
+BOT_TOKEN = "8975139816:AAFtWktzhBH0VxsLG4brQRAnK5OpoXxgzlQ"
 API_ID = 22370234
 API_HASH = "706badded011715ae115e5ab3bf83f87"
 
