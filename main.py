@@ -12,14 +12,13 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from pypdf import PdfWriter
 from pyrogram import Client, filters
-from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
+from pyrogram.types import Message
 from pyrogram.errors import FloodWait
 
-# ───────────────── CONFIG ─────────────────
-# ✅ अपना Bot Token, API ID और API Hash यहाँ डालें
-BOT_TOKEN = "8840274547:AAGqA7dYBSlAWPA9QF0N2zW1uvoUeTu9lY0"
-API_ID = 22370234       # अपना API ID डालें
-API_HASH = "706badded011715ae115e5ab3bf83f87" # अपना API Hash डालें
+# ───────────────── CONFIG ────────────────
+BOT_TOKEN = "8646009620:AAHW_ABhXrfBo2sMtQ2_CBTV0Ak9KhWVuiA"
+API_ID = 22370234       
+API_HASH = "706badded011715ae115e5ab3bf83f87" 
 
 APP_NAME = "Pinnacle Ebook"
 EBOOKS_API = "https://auth.ssccglpinnacle.com/api/ebooksforactive?active=true"
@@ -28,7 +27,6 @@ EBOOK_PDFS_API = "https://auth.ssccglpinnacle.com/api/pdfs-ebook/{chapter_id}"
 CLOUDFRONT_BASE = "https://dzdx39zg243ni.cloudfront.net/{s3_key}"
 OUTPUT_DIR = "downloads"
 
-# Pinnacle Auth Token
 AUTH_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5NWI0MmJjNzQwZGFkMjQzN2I1NzhlYiIsInJvbGUiOiJzdHVkZW50IiwiaXAiOiIxNTIuNTkuMTcuOTAiLCJkZXZpY2UiOiJNb3ppbGxhLzUuMCAoV2luZG93cyBOVCAxMC4wOyBXaW42NDsgeDY0KSBBcHBsZVdlYktpdC81MzcuMzYgKEtIVE1MLCBsaWtlIEdlY2tvKSBDaHJvbWUvMTUwLjAuMC4wIFNhZmFyaS81MzcuMzYiLCJpYXQiOjE3ODQxNzg2MzYsImV4cCI6MTg0NzI1MDYzNn0.z4e1LKkpvkxCvjqlipVg_wrwffeCt4dZidr6yuLfy6o"
 
 HEADERS = {
@@ -104,7 +102,7 @@ def parse_user_input(inp: str, total_books: int) -> List[int]:
             except: continue
     return sorted(list(set(indices)))
 
-# ───────────────── API FUNCTIONS ─────────────────
+# ──────────────── API FUNCTIONS ─────────────────
 def get_all_books():
     data = fetch_json(EBOOKS_API)
     return data if isinstance(data, list) else []
@@ -144,18 +142,17 @@ async def download_and_merge_pdf(book, chat_id, bot, progress_msg_id):
         ch_title = ch.get("title", "Unknown")
         ch_id = ch.get("_id")
         
-        # Update Progress Message
         percent = int((idx / total_ch) * 100)
         progress_text = (
-            f" <b>Processing:</b> {truncate(full_title, 40)}\n"
+            f"⏳ <b>Processing:</b> {truncate(full_title, 40)}\n"
             f"📥 Merged: <b>{idx}/{total_ch}</b> Chapters ({percent}%)\n"
             f" Current: {truncate(ch_title, 35)}\n"
             f"<i>Please wait, do not spam...</i>"
         )
         try:
-            await bot.edit_message_text(chat_id, progress_msg_id, progress_text)
+            await bot.edit_message_text(chat_id, progress_msg_id, progress_text, parse_mode="HTML")
         except Exception:
-            pass # Ignore if message was deleted or flood wait
+            pass 
         
         pdf_info = get_chapter_pdf(ch_id)
         if pdf_info and pdf_info.get("s3Key"):
@@ -174,7 +171,6 @@ async def download_and_merge_pdf(book, chat_id, bot, progress_msg_id):
                 pdf_writer.append(temp_pdf_path)
                 pdf_count += 1
                 
-                # Delete temp file immediately to save Heroku/Server disk space
                 if os.path.exists(temp_pdf_path):
                     os.remove(temp_pdf_path)
                     
@@ -183,9 +179,8 @@ async def download_and_merge_pdf(book, chat_id, bot, progress_msg_id):
                 if os.path.exists(temp_pdf_path):
                     os.remove(temp_pdf_path)
             
-            await asyncio.sleep(0.1) # Prevent rate limiting
+            await asyncio.sleep(0.1) 
             
-    # Save final merged PDF
     if pdf_count > 0:
         with open(final_pdf_path, "wb") as f_out:
             pdf_writer.write(f_out)
@@ -196,29 +191,24 @@ async def download_and_merge_pdf(book, chat_id, bot, progress_msg_id):
         return None, 0, total_ch
 
 # ──────────────── PYROGRAM BOT SETUP ─────────────────
-app = Client(
-    "PinnacleMergedBot", 
-    api_id=API_ID, 
-    api_hash=API_HASH, 
-    bot_token=BOT_TOKEN,
-    parse_mode="HTML"  # ✅ GLOBAL HTML PARSING ENABLED
-)
+# ✅ parse_mode यहाँ नहीं लगाना है!
+app = Client("PinnacleMergedBot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
 @app.on_message(filters.command("start") & filters.private)
 async def start_command(client: Client, message: Message):
     chat_id = message.chat.id
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     
-    wait_msg = await message.reply_text("🔄 Fetching available batches... Please wait.")
+    # ✅ parse_mode="HTML" यहाँ लगाएं
+    wait_msg = await message.reply_text("🔄 Fetching available batches... Please wait.", parse_mode="HTML")
     
     books = await asyncio.to_thread(get_all_books)
     if not books:
-        return await wait_msg.edit_text("❌ Failed to fetch ebooks! Check API connection or Token.")
+        return await wait_msg.edit_text("❌ Failed to fetch ebooks! Check API connection or Token.", parse_mode="HTML")
     
     total = len(books)
     await wait_msg.delete()
     
-    # Create list file
     list_file = os.path.join(OUTPUT_DIR, "Pinnacle_Ebooks_List.txt")
     with open(list_file, "w", encoding="utf-8") as f:
         f.write("📚 Pinnacle Available Ebooks\n\n")
@@ -234,13 +224,14 @@ async def start_command(client: Client, message: Message):
         f"• <code>5</code> → Only book #5\n"
         f"• <code>1,3,5</code> → Books 1, 3, and 5\n"
         f"• <code>10-15</code> → Books 10 to 15\n\n"
-        f"<i>⚠️ Note: Large books may take 1-3 minutes to merge.</i>"
+        f"<i>️ Note: Large books may take 1-3 minutes to merge.</i>"
     )
     
     await message.reply_document(
         document=list_file,
         file_name="Pinnacle_Ebooks_List.txt",
-        caption=caption
+        caption=caption,
+        parse_mode="HTML"  # ✅ यहाँ भी लगाएं
     )
     if os.path.exists(list_file):
         os.remove(list_file)
@@ -250,19 +241,17 @@ async def handle_selection(client: Client, message: Message):
     chat_id = message.chat.id
     user_input = message.text.strip()
     
-    # Fetch books again to ensure fresh data
     books = await asyncio.to_thread(get_all_books)
     if not books:
-        return await message.reply_text("❌ Failed to fetch books. Try /start again.")
+        return await message.reply_text("❌ Failed to fetch books. Try /start again.", parse_mode="HTML")
     
     total = len(books)
     indices = parse_user_input(user_input, total)
     
     if not indices:
-        return await message.reply_text("❌ Invalid input! Use formats like: `1`, `1,3,5`, or `10-15`")
+        return await message.reply_text(" Invalid input! Use formats like: `1`, `1,3,5`, or `10-15`", parse_mode="HTML")
     
-    # Acknowledge request
-    ack_msg = await message.reply_text(f"✅ Received! Processing {len(indices)} book(s). This will take some time...")
+    ack_msg = await message.reply_text(f"✅ Received! Processing {len(indices)} book(s). This will take some time...", parse_mode="HTML")
     await asyncio.sleep(1)
     await ack_msg.delete()
     
@@ -276,7 +265,7 @@ async def handle_selection(client: Client, message: Message):
         price = get_price(book) if not is_free(book) else "Free"
         image_url = book.get("image", "")
         
-        # 1. Send Photo + Details First (WITH BLOCKQUOTE)
+        # ✅ Blockquote Photo Caption
         details_caption = (
             f"<blockquote><b>📚 Book:</b> {full_title}\n\n"
             f"<b>💸 Price:</b> ₹{price}</blockquote>"
@@ -284,31 +273,30 @@ async def handle_selection(client: Client, message: Message):
         
         try:
             if image_url and image_url.startswith("http"):
-                await client.send_photo(chat_id, photo=image_url, caption=details_caption)
+                await client.send_photo(chat_id, photo=image_url, caption=details_caption, parse_mode="HTML")
             else:
-                await client.send_message(chat_id, details_caption)
+                await client.send_message(chat_id, details_caption, parse_mode="HTML")
         except Exception as e:
             log.error(f"Failed to send photo: {e}")
-            await client.send_message(chat_id, details_caption)
+            await client.send_message(chat_id, details_caption, parse_mode="HTML")
         
-        # 2. Send Progress Message
         progress_msg = await client.send_message(
             chat_id, 
-            f"⏳ <b>Initializing merge for:</b> {truncate(full_title, 40)}\n🔄 Please wait..."
+            f"⏳ <b>Initializing merge for:</b> {truncate(full_title, 40)}\n Please wait...",
+            parse_mode="HTML"
         )
         
-        # 3. Download & Merge
         merged_pdf_path, pdf_cnt, ch_cnt = await download_and_merge_pdf(book, chat_id, client, progress_msg.id)
         
         if not merged_pdf_path:
-            await progress_msg.edit_text(f"❌ Failed to merge <b>{full_title}</b>. No chapters found or API error.")
+            await progress_msg.edit_text(f"❌ Failed to merge <b>{full_title}</b>. No chapters found or API error.", parse_mode="HTML")
             await asyncio.sleep(2)
             continue
         
-        # 4. Upload Final Merged PDF (WITH BLOCKQUOTE)
+        # ✅ Blockquote PDF Caption
         final_caption = (
-            f"<blockquote><b>📚 Book:</b> {full_title}\n\n"
-            f"<b> Chapters :</b> {pdf_cnt}\n\n"
+            f"<blockquote><b> Book:</b> {full_title}\n\n"
+            f"<b>📄 Chapters :</b> {pdf_cnt}\n\n"
             f"<i>Powered by @PinnacleallEbook</i></blockquote>"
         )
         
@@ -317,36 +305,34 @@ async def handle_selection(client: Client, message: Message):
                 chat_id=chat_id,
                 document=merged_pdf_path,
                 file_name=os.path.basename(merged_pdf_path),
-                caption=final_caption
+                caption=final_caption,
+                parse_mode="HTML"  # ✅ यहाँ सबसे जरूरी है
             )
             success_count += 1
         except FloodWait as e:
-            await client.send_message(chat_id, f"⏳ FloodWait: Waiting for {e.value} seconds...")
+            await client.send_message(chat_id, f"⏳ FloodWait: Waiting for {e.value} seconds...", parse_mode="HTML")
             await asyncio.sleep(e.value)
-            await client.send_document(chat_id=chat_id, document=merged_pdf_path, caption=final_caption)
+            await client.send_document(chat_id=chat_id, document=merged_pdf_path, caption=final_caption, parse_mode="HTML")
             success_count += 1
         except Exception as e:
             log.error(f"Failed to upload PDF: {e}")
-            await client.send_message(chat_id, f"❌ Failed to upload {full_title}. Error: {e}")
+            await client.send_message(chat_id, f"❌ Failed to upload {full_title}. Error: {e}", parse_mode="HTML")
         
-        # 5. Delete Progress Message
         try:
             await progress_msg.delete()
         except Exception:
             pass
         
-        # 6. Clean up merged PDF from server to save space
         if os.path.exists(merged_pdf_path):
             os.remove(merged_pdf_path)
             
-        # Small delay between books to prevent API rate limits
         await asyncio.sleep(1.5)
     
-    # Final Summary
     await message.reply_text(
         f"🎉 <b>Task Completed!</b>\n\n"
         f"✅ Successfully processed and sent: <b>{success_count}</b> book(s).\n"
-        f"❌ Failed/Skipped: <b>{len(indices) - success_count}</b> book(s)."
+        f"❌ Failed/Skipped: <b>{len(indices) - success_count}</b> book(s).",
+        parse_mode="HTML"
     )
 
 # ───────────────── RUN BOT ─────────────────
