@@ -270,10 +270,12 @@ async def handle_selection(client: Client, message: Message):
         price = get_price(book) if not is_free(book) else "Free"
         image_url = book.get("image", "")
         
-        # 1. Send Photo + Details First
+        # 1. Send Photo + Details First (WITH BLOCKQUOTE)
         details_caption = (
-            f"📚 <b>{full_title}</b>\n\n"
-            f"💸 <b>Price:</b> ₹{price}\n"
+            f"<blockquote>"
+            f"<b>📚 Book:</b> {full_title}\n\n"
+            f"<b>💸 Price:</b> ₹{price}"
+            f"</blockquote>"
         )
         
         try:
@@ -299,11 +301,13 @@ async def handle_selection(client: Client, message: Message):
             await asyncio.sleep(2)
             continue
         
-        # 4. Upload Final Merged PDF (UPDATED SPACED CAPTION)
+        # 4. Upload Final Merged PDF (WITH BLOCKQUOTE)
         final_caption = (
-            f"📚 <b>Book:</b> {full_title}\n\n"
-            f"📄 <b>Chapters :</b> {pdf_cnt}\n\n"
+            f"<blockquote>"
+            f"<b>📚 Book:</b> {full_title}\n\n"
+            f"<b>📄 Chapters :</b> {pdf_cnt}\n\n"
             f"<i>Powered by @PinnacleallEbook</i>"
+            f"</blockquote>"
         )
         
         try:
