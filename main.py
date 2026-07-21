@@ -147,7 +147,7 @@ async def download_and_merge_pdf(book, chat_id, bot, progress_msg_id):
         # Update Progress Message
         percent = int((idx / total_ch) * 100)
         progress_text = (
-            f"⏳ <b>Processing:</b> {truncate(full_title, 40)}\n"
+            f" <b>Processing:</b> {truncate(full_title, 40)}\n"
             f"📥 Merged: <b>{idx}/{total_ch}</b> Chapters ({percent}%)\n"
             f" Current: {truncate(ch_title, 35)}\n"
             f"<i>Please wait, do not spam...</i>"
@@ -196,7 +196,13 @@ async def download_and_merge_pdf(book, chat_id, bot, progress_msg_id):
         return None, 0, total_ch
 
 # ──────────────── PYROGRAM BOT SETUP ─────────────────
-app = Client("PinnacleMergedBot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
+app = Client(
+    "PinnacleMergedBot", 
+    api_id=API_ID, 
+    api_hash=API_HASH, 
+    bot_token=BOT_TOKEN,
+    parse_mode="HTML"  # ✅ GLOBAL HTML PARSING ENABLED
+)
 
 @app.on_message(filters.command("start") & filters.private)
 async def start_command(client: Client, message: Message):
@@ -302,7 +308,7 @@ async def handle_selection(client: Client, message: Message):
         # 4. Upload Final Merged PDF (WITH BLOCKQUOTE)
         final_caption = (
             f"<blockquote><b>📚 Book:</b> {full_title}\n\n"
-            f"<b>📄 Chapters :</b> {pdf_cnt}\n\n"
+            f"<b> Chapters :</b> {pdf_cnt}\n\n"
             f"<i>Powered by @PinnacleallEbook</i></blockquote>"
         )
         
