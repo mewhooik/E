@@ -271,11 +271,12 @@ async def handle_selection(client: Client, message: Message):
         image_url = book.get("image", "")
         
         # 1. Send Photo + Details First
+        # 1. Send Photo + Details First (SIMPLIFIED)
         details_caption = (
-            f"📚 <b>{full_title}</b>\n\n"
-            f"🪪 <b>ID:</b> <code>{book_id}</code>\n"
-            f"💸 <b>Price:</b> ₹{price}\n"
-            f"📂 <b>Status:</b> Preparing Merged PDF..."
+            f"📚 {full_title}\n\n"
+            f"💸 Price: ₹{price}\n\n"
+            f"⏳ Preparing merged PDF...\n"
+            f"<i>Please wait, this may take a few minutes.</i>"
         )
         
         try:
@@ -302,38 +303,48 @@ async def handle_selection(client: Client, message: Message):
             continue
         
         # 4. Upload Final Merged PDF
-        final_caption = (
-            f"✅ <b>Merge Complete!</b>\n\n"
-            f"📚 <b>Book:</b> {full_title}\n"
-            f"📄 <b>Chapters Merged:</b> {pdf_cnt} / {ch_cnt}\n"
-            f"📁 <b>File:</b> <code>{os.path.basename(merged_pdf_path)}</code>\n\n"
-            f"<i>Powered by Pinnacle Ebook Bot</i>"
-        )
-        
+        pdf_message = None
         try:
-            await client.send_document(
+            pdf_message = await client.send_document(
                 chat_id=chat_id,
                 document=merged_pdf_path,
                 file_name=os.path.basename(merged_pdf_path),
-                caption=final_caption
             )
             success_count += 1
         except FloodWait as e:
             await client.send_message(chat_id, f"⏳ FloodWait: Waiting for {e.value} seconds...")
             await asyncio.sleep(e.value)
-            await client.send_document(chat_id=chat_id, document=merged_pdf_path, caption=final_caption)
+            pdf_message = await client.send_document(
+                chat_id=chat_id,
+                document=merged_pdf_path,
+                file_name=os.path.basename(merged_pdf_path),
+            )
             success_count += 1
         except Exception as e:
             log.error(f"Failed to upload PDF: {e}")
             await client.send_message(chat_id, f"❌ Failed to upload {full_title}. Error: {e}")
         
-        # 5. Delete Progress Message
+        # 5. Send Details Message (PDF ko REPLY/QUOTE karte hue) - SIMPLIFIED
+        details_text = (
+            f"📚 Book: {full_title}\n\n"
+            f"📄 Chapters : {ch_cnt}\n\n"
+            f"📁 File: {os.path.basename(merged_pdf_path)}"
+        )
+        
+        if pdf_message:
+            await client.send_message(
+                chat_id=chat_id,
+                text=details_text,
+                reply_to_message_id=pdf_message.id  # PDF ko reply karega
+            )
+        
+        # 6. Delete Progress Message
         try:
             await progress_msg.delete()
         except Exception:
             pass
         
-        # 6. Clean up merged PDF from server to save space
+        # 7. Clean up merged PDF from server to save space
         if os.path.exists(merged_pdf_path):
             os.remove(merged_pdf_path)
             
