@@ -272,10 +272,8 @@ async def handle_selection(client: Client, message: Message):
         
         # 1. Send Photo + Details First (WITH BLOCKQUOTE)
         details_caption = (
-            f"<blockquote>"
-            f"<b>📚 Book:</b> {full_title}\n\n"
-            f"<b>💸 Price:</b> ₹{price}"
-            f"</blockquote>"
+            f"<blockquote><b>📚 Book:</b> {full_title}\n\n"
+            f"<b>💸 Price:</b> ₹{price}</blockquote>"
         )
         
         try:
@@ -303,11 +301,9 @@ async def handle_selection(client: Client, message: Message):
         
         # 4. Upload Final Merged PDF (WITH BLOCKQUOTE)
         final_caption = (
-            f"<blockquote>"
-            f"<b>📚 Book:</b> {full_title}\n\n"
+            f"<blockquote><b>📚 Book:</b> {full_title}\n\n"
             f"<b>📄 Chapters :</b> {pdf_cnt}\n\n"
-            f"<i>Powered by @PinnacleallEbook</i>"
-            f"</blockquote>"
+            f"<i>Powered by @PinnacleallEbook</i></blockquote>"
         )
         
         try:
