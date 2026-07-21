@@ -270,6 +270,21 @@ async def handle_selection(client: Client, message: Message):
         price = get_price(book) if not is_free(book) else "Free"
         image_url = book.get("image", "")
         
+        # 🟢 NEW: Download Thumbnail for PDF
+        thumb_path = None
+        if image_url and image_url.startswith("http"):
+            try:
+                thumb_path = os.path.join(OUTPUT_DIR, f"thumb_{idx}.jpg")
+                sess = create_session()
+                with sess.get(image_url, stream=True, timeout=30) as r:
+                    r.raise_for_status()
+                    with open(thumb_path, 'wb') as f:
+                        for chunk in r.iter_content(chunk_size=8192):
+                            f.write(chunk)
+            except Exception as e:
+                log.error(f"Thumbnail download failed for {full_title}: {e}")
+                thumb_path = None
+
         # 1. Send Photo + Details First
         details_caption = (
             f"📚 <b>{full_title}</b>\n\n"
@@ -297,9 +312,12 @@ async def handle_selection(client: Client, message: Message):
         if not merged_pdf_path:
             await progress_msg.edit_text(f"❌ Failed to merge <b>{full_title}</b>. No chapters found or API error.")
             await asyncio.sleep(2)
+            # Clean up thumb if merge fails
+            if thumb_path and os.path.exists(thumb_path):
+                os.remove(thumb_path)
             continue
         
-        # 4. Upload Final Merged PDF (UPDATED SPACED CAPTION)
+        # 4. Upload Final Merged PDF (UPDATED WITH THUMB)
         final_caption = (
             f"📚 <b>Book:</b> {full_title}\n\n"
             f"📄 <b>Chapters :</b> {pdf_cnt}\n\n"
@@ -311,13 +329,19 @@ async def handle_selection(client: Client, message: Message):
                 chat_id=chat_id,
                 document=merged_pdf_path,
                 file_name=os.path.basename(merged_pdf_path),
-                caption=final_caption
+                caption=final_caption,
+                thumb=thumb_path  # 👈 यहाँ थंबनेल जोड़ा गया
             )
             success_count += 1
         except FloodWait as e:
             await client.send_message(chat_id, f"⏳ FloodWait: Waiting for {e.value} seconds...")
             await asyncio.sleep(e.value)
-            await client.send_document(chat_id=chat_id, document=merged_pdf_path, caption=final_caption)
+            await client.send_document(
+                chat_id=chat_id, 
+                document=merged_pdf_path, 
+                caption=final_caption,
+                thumb=thumb_path  # 👈 FloodWait में भी थंबनेल जोड़ा गया
+            )
             success_count += 1
         except Exception as e:
             log.error(f"Failed to upload PDF: {e}")
@@ -329,9 +353,12 @@ async def handle_selection(client: Client, message: Message):
         except Exception:
             pass
         
-        # 6. Clean up merged PDF from server to save space
+        # 6. Clean up merged PDF & Thumbnail from server to save space
         if os.path.exists(merged_pdf_path):
             os.remove(merged_pdf_path)
+            
+        if thumb_path and os.path.exists(thumb_path):
+            os.remove(thumb_path)
             
         # Small delay between books to prevent API rate limits
         await asyncio.sleep(1.5)
