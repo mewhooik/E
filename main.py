@@ -4,7 +4,7 @@
 Pinnacle Ebook Merged PDF Bot - Standalone (Heroku/Server Ready)
 """
 
-import os, re, asyncio, logging
+import os, re, asyncio, logging, signal
 from datetime import datetime
 from typing import List, Dict
 import requests
@@ -16,7 +16,7 @@ from pyrogram.types import Message
 from pyrogram.errors import FloodWait
 
 # ───────────────── CONFIG ─────────────────
-BOT_TOKEN = "8975139816:AAFtWktzhBH0VxsLG4brQRAnK5OpoXxgzlQ"
+BOT_TOKEN = "8646009620:AAHW_ABhXrfBo2sMtQ2_CBTV0Ak9KhWVuiA"
 API_ID = 22370234
 API_HASH = "706badded011715ae115e5ab3bf83f87"
 
@@ -42,7 +42,7 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s - %(message)s")
 log = logging.getLogger("PinnacleBot")
 
 # ──────────────── GLOBAL STOP FLAG ─────────────────
-processing_tasks: Dict[int, bool] = {}  # user_id -> is_stopped
+processing_tasks: Dict[int, bool] = {}
 
 # ──────────────── HELPERS ─────────────────
 def create_session():
@@ -105,7 +105,6 @@ def parse_user_input(inp: str, total_books: int) -> List[int]:
             except: continue
     return sorted(list(set(indices)))
 
-# ───────────────── API FUNCTIONS ─────────────────
 def get_all_books():
     data = fetch_json(EBOOKS_API)
     return data if isinstance(data, list) else []
@@ -122,9 +121,7 @@ def get_chapter_pdf(chapter_id):
     data = fetch_json(url, timeout=8)
     return data[0] if isinstance(data, list) and data else None
 
-# ───────────────── CORE: DOWNLOAD & MERGE ─────────────────
 async def download_and_merge_pdf(book, chat_id, bot, progress_msg_id, user_id):
-    """Downloads chapters, merges them, and updates progress message."""
     book_id = book.get("_id")
     full_title = book.get("title", "Unknown")
     chapters = get_chapters(book_id)
@@ -142,18 +139,16 @@ async def download_and_merge_pdf(book, chat_id, bot, progress_msg_id, user_id):
     log.info(f"Starting merge for: {full_title}")
     
     for idx, ch in enumerate(chapters, 1):
-        # ✅ Check if user pressed /stop
         if processing_tasks.get(user_id, False):
             log.info(f"Processing stopped by user {user_id}")
-            return None, idx - 1, total_ch  # Return partial progress
+            return None, idx - 1, total_ch
         
         ch_title = ch.get("title", "Unknown")
         ch_id = ch.get("_id")
         
-        # Update Progress Message
         percent = int((idx / total_ch) * 100)
         progress_text = (
-            f"📚 {full_title}\n\n"
+            f" {full_title}\n\n"
             f"💰 Price: ₹{get_price(book) if not is_free(book) else 'Free'}\n\n"
             f"⏳ Merging Progress: {idx}/{total_ch} Chapters ({percent}%)\n"
             f"🔄 Current: {truncate(ch_title, 35)}\n"
@@ -194,36 +189,29 @@ async def download_and_merge_pdf(book, chat_id, bot, progress_msg_id, user_id):
     if pdf_count > 0:
         with open(final_pdf_path, "wb") as f_out:
             pdf_writer.write(f_out)
-        log.info(f"Successfully merged {pdf_count}/{total_ch} chapters into {final_pdf_path}")
+        log.info(f"Successfully merged {pdf_count}/{total_ch} chapters")
         return final_pdf_path, pdf_count, total_ch
     else:
         log.warning(f"No PDFs could be downloaded for {full_title}")
         return None, 0, total_ch
 
-# ───────────────── PYROGRAM BOT SETUP ─────────────────
+# ───────────────── BOT SETUP ─────────────────
 app = Client("PinnacleMergedBot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
-# ✅ TEST HANDLER - Sabse pehle
 @app.on_message(filters.command("test"))
 async def test_handler(client: Client, message: Message):
-    try:
-        await message.reply_text("✅ Bot is receiving messages! Ab /start karein.")
-        log.info(f"Test message received from user {message.from_user.id}")
-    except Exception as e:
-        log.error(f"Test handler error: {e}")
-        await message.reply_text(f"Error: {e}")
+    log.info(f"✅ TEST COMMAND RECEIVED from user {message.from_user.id}")
+    await message.reply_text("✅ Bot is working! Messages aa rahe hain. Ab /start karein.")
 
-# ✅ START COMMAND
 @app.on_message(filters.command("start"))
 async def start_command(client: Client, message: Message):
     try:
-        log.info(f"Start command received from user {message.from_user.id}")
+        log.info(f" START COMMAND RECEIVED from user {message.from_user.id}")
         
         chat_id = message.chat.id
         user_id = message.from_user.id
         os.makedirs(OUTPUT_DIR, exist_ok=True)
         
-        # Reset stop flag
         processing_tasks[user_id] = False
         
         wait_msg = await message.reply_text("🔄 Fetching available batches... Please wait.")
@@ -237,7 +225,7 @@ async def start_command(client: Client, message: Message):
         
         list_file = os.path.join(OUTPUT_DIR, "Pinnacle_Ebooks_List.txt")
         with open(list_file, "w", encoding="utf-8") as f:
-            f.write(" Pinnacle Available Ebooks\n\n")
+            f.write("📚 Pinnacle Available Ebooks\n\n")
             for i, book in enumerate(books, 1):
                 title = truncate(book.get("title", "Unknown"), 60)
                 price_tag = "🟡 Free" if is_free(book) else f"₹{get_price(book)}"
@@ -266,7 +254,6 @@ async def start_command(client: Client, message: Message):
         log.error(f"Start command error: {e}")
         await message.reply_text(f"❌ Error: {e}")
 
-# ✅ STOP COMMAND
 @app.on_message(filters.command("stop"))
 async def stop_command(client: Client, message: Message):
     user_id = message.from_user.id
@@ -285,7 +272,6 @@ async def stop_command(client: Client, message: Message):
             "Use /start to begin downloading books."
         )
 
-# ✅ HANDLE SELECTION
 @app.on_message(filters.text & filters.private & ~filters.command(["start", "stop", "test"]))
 async def handle_selection(client: Client, message: Message):
     try:
@@ -293,14 +279,13 @@ async def handle_selection(client: Client, message: Message):
         user_id = message.from_user.id
         user_input = message.text.strip()
         
-        log.info(f"Received input from user {user_id}: {user_input}")
+        log.info(f"📝 Received input from user {user_id}: {user_input}")
         
-        # Reset stop flag
         processing_tasks[user_id] = False
         
         books = await asyncio.to_thread(get_all_books)
         if not books:
-            return await message.reply_text(" Failed to fetch books. Try /start again.")
+            return await message.reply_text("❌ Failed to fetch books. Try /start again.")
         
         total = len(books)
         indices = parse_user_input(user_input, total)
@@ -316,7 +301,6 @@ async def handle_selection(client: Client, message: Message):
         stopped_early = False
         
         for idx in indices:
-            # ✅ Check if stopped
             if processing_tasks.get(user_id, False):
                 stopped_early = True
                 break
@@ -328,7 +312,6 @@ async def handle_selection(client: Client, message: Message):
             price = get_price(book) if not is_free(book) else "Free"
             image_url = book.get("image", "")
             
-            # ✅ STEP 1: Send Photo with Basic Details
             photo_caption = (
                 f"📚 {full_title}\n\n"
                 f"💰 Price: ₹{price}\n\n"
@@ -349,15 +332,13 @@ async def handle_selection(client: Client, message: Message):
                 progress_msg = await client.send_message(chat_id, photo_caption)
                 progress_msg_id = progress_msg.id
             
-            # ✅ STEP 2: Download & Merge
             merged_pdf_path, pdf_cnt, ch_cnt = await download_and_merge_pdf(book, chat_id, client, progress_msg_id, user_id)
             
-            # Check if stopped during merge
             if processing_tasks.get(user_id, False):
                 stopped_early = True
                 await client.edit_message_text(
                     chat_id, progress_msg_id,
-                    f"📚 {full_title}\n\n🛑 <b>Cancelled by user</b>\n\n"
+                    f"📚 {full_title}\n\n <b>Cancelled by user</b>\n\n"
                     f"Partial progress: {pdf_cnt}/{ch_cnt} chapters merged before stopping."
                 )
                 await asyncio.sleep(2)
@@ -370,7 +351,7 @@ async def handle_selection(client: Client, message: Message):
             if not merged_pdf_path:
                 await client.edit_message_text(
                     chat_id, progress_msg_id,
-                    f"📚 {full_title}\n\n Failed to merge. No chapters found or API error."
+                    f"📚 {full_title}\n\n❌ Failed to merge. No chapters found or API error."
                 )
                 await asyncio.sleep(2)
                 try:
@@ -379,7 +360,6 @@ async def handle_selection(client: Client, message: Message):
                     pass
                 continue
             
-            # ✅ STEP 3: Upload Final Merged PDF
             pdf_message = None
             try:
                 pdf_message = await client.send_document(
@@ -401,7 +381,6 @@ async def handle_selection(client: Client, message: Message):
                 log.error(f"Failed to upload PDF: {e}")
                 await client.send_message(chat_id, f"❌ Failed to upload {full_title}. Error: {e}")
             
-            # ✅ STEP 4: Send Detailed Info Message (PDF ko Reply karte hue)
             details_text = (
                 f"📖 <b>Book:</b> {full_title}\n\n"
                 f"📄 <b>Chapters:</b> {ch_cnt}\n"
@@ -416,22 +395,18 @@ async def handle_selection(client: Client, message: Message):
                     reply_to_message_id=pdf_message.id
                 )
             
-            # ✅ STEP 5: Delete Progress Photo/Message
             try:
                 await client.delete_messages(chat_id, progress_msg_id)
             except Exception:
                 pass
             
-            # ✅ STEP 6: Clean up merged PDF from server
             if os.path.exists(merged_pdf_path):
                 os.remove(merged_pdf_path)
             
             await asyncio.sleep(1.5)
         
-        # Reset stop flag
         processing_tasks[user_id] = False
         
-        # Final Summary
         if stopped_early:
             await message.reply_text(
                 f"🛑 <b>Processing Stopped by User</b>\n\n"
@@ -449,16 +424,40 @@ async def handle_selection(client: Client, message: Message):
         log.error(f"Handle selection error: {e}")
         await message.reply_text(f"❌ Error: {e}")
 
-# ───────────────── RUN BOT ─────────────────
-from pyrogram import idle
-
+# ───────────────── RUN BOT (Fixed Shutdown Error) ────────────────
 async def main():
     log.info("🚀 Starting Pinnacle Merged PDF Bot...")
     await app.start()
     log.info("✅ Bot is running! Press Ctrl+C to stop.")
-    await idle()
-    await app.stop()
+    
+    # Keep bot running indefinitely
+    try:
+        while True:
+            await asyncio.sleep(3600)
+    except (asyncio.CancelledError, KeyboardInterrupt):
+        log.info("Shutting down bot...")
+    finally:
+        try:
+            await app.stop()
+        except Exception as e:
+            log.error(f"Error during shutdown: {e}")
 
 if __name__ == "__main__":
     import asyncio
-    asyncio.run(main())
+    
+    # Handle SIGTERM gracefully
+    def signal_handler():
+        log.info("Received shutdown signal")
+        for task in asyncio.all_tasks():
+            task.cancel()
+    
+    loop = asyncio.get_event_loop()
+    for sig in (signal.SIGTERM, signal.SIGINT):
+        loop.add_signal_handler(sig, signal_handler)
+    
+    try:
+        loop.run_until_complete(main())
+    except Exception as e:
+        log.error(f"Fatal error: {e}")
+    finally:
+        loop.close()
