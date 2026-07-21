@@ -17,9 +17,9 @@ from pyrogram.errors import FloodWait
 
 # ───────────────── CONFIG ─────────────────
 # ✅ अपना Bot Token, API ID और API Hash यहाँ डालें
-BOT_TOKEN = "YOUR_BOT_TOKEN_HERE"
-API_ID = 12345678       # अपना API ID डालें
-API_HASH = "your_api_hash_here" # अपना API Hash डालें
+BOT_TOKEN = "8646009620:AAFnz0TBeN675UJX52GQq5rEXvsWa-RWfvI"
+API_ID = 22370234       # अपना API ID डालें
+API_HASH = "706badded011715ae115e5ab3bf83f87" # अपना API Hash डालें
 
 APP_NAME = "Pinnacle Ebook"
 EBOOKS_API = "https://auth.ssccglpinnacle.com/api/ebooksforactive?active=true"
